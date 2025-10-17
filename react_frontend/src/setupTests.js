@@ -1,5 +1,6 @@
-// jest-dom adds custom jest matchers for asserting on DOM nodes.
-// allows you to do things like:
-// expect(element).toHaveTextContent(/react/i)
-// learn more: https://github.com/testing-library/jest-dom
+/* Global Jest + RTL setup for CRA.
+   - Adds jest-dom matchers
+   - Loads window API mocks used by components (speech, etc.)
+*/
 import '@testing-library/jest-dom';
+import './__tests__/test_setup_window_mocks';

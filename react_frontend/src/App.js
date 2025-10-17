@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import Router from './router';
 import { ThemeContext, defaultTheme } from './theme';
-import { getToken, logout } from './api/client';
+import { getToken } from './api/client';
 
 // PUBLIC_INTERFACE
 function App() {
@@ -19,7 +19,11 @@ function App() {
 
   // If token becomes invalid on any page action, user can click logout in the topbar
   const handleLogout = () => {
-    logout();
+    try {
+      localStorage.removeItem('token');
+    } catch {
+      // ignore
+    }
     window.location.href = '/login';
   };
 

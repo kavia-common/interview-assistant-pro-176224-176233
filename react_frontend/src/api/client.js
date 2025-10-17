@@ -7,13 +7,19 @@ export function getApiBaseUrl() {
   return base.replace(/\/+$/, "");
 }
 
-function getAuthHeader() {
+// PUBLIC_INTERFACE
+export function getToken() {
+  /** Returns JWT token from localStorage if available. */
   try {
-    const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return localStorage.getItem("token");
   } catch {
-    return {};
+    return null;
   }
+}
+
+function getAuthHeader() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // PUBLIC_INTERFACE

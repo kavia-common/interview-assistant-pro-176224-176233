@@ -1,110 +1,73 @@
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
-
-// Token storage helpers
-const TOKEN_KEY = 'ia_jwt_token';
+/** Centralized API client using REACT_APP_API_BASE_URL and attaching JWT if present. */
 
 // PUBLIC_INTERFACE
-export function getToken() {
-  /** Retrieve JWT token from localStorage. */
+export function getApiBaseUrl() {
+  /** Returns the API base URL read from environment. */
+  const base = process.env.REACT_APP_API_BASE_URL || "";
+  return base.replace(/\/+$/, "");
+}
+
+function getAuthHeader() {
   try {
-    return window.localStorage.getItem(TOKEN_KEY);
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
   } catch {
-    return null;
+    return {};
   }
 }
 
 // PUBLIC_INTERFACE
-export function setToken(token) {
-  /** Persist JWT token to localStorage. */
-  try {
-    if (token) {
-      window.localStorage.setItem(TOKEN_KEY, token);
-    } else {
-      window.localStorage.removeItem(TOKEN_KEY);
-    }
-  } catch {
-    // ignore storage errors
-  }
-}
+export async function apiRequest(path, options = {}) {
+  /** Perform a fetch to the backend with JWT header when available. */
+  const base = getApiBaseUrl();
+  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
 
-// PUBLIC_INTERFACE
-export function logout() {
-  /** Clear auth token. */
-  setToken(null);
-}
-
-async function request(path, { method = 'GET', body, headers } = {}) {
-  const token = getToken();
-  const url = `${BASE_URL}${path}`;
-  const opts = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+  const headers = {
+    "Content-Type": "application/json",
+    ...getAuthHeader(),
+    ...(options.headers || {}),
   };
-  if (body !== undefined) {
-    opts.body = JSON.stringify(body);
-  }
 
-  const res = await fetch(url, opts);
-  const contentType = res.headers.get('content-type') || '';
-  let data = null;
-  if (contentType.includes('application/json')) {
-    data = await res.json().catch(() => ({}));
+  const response = await fetch(url, { ...options, headers });
+  const contentType = response.headers.get("content-type") || "";
+
+  let body;
+  if (contentType.includes("application/json")) {
+    body = await response.json();
   } else {
-    data = await res.text().catch(() => '');
+    body = await response.text();
   }
 
-  if (!res.ok) {
-    const message = (data && data.message) || `Request failed: ${res.status}`;
-    const error = new Error(message);
-    error.status = res.status;
-    error.data = data;
-    throw error;
+  if (!response.ok) {
+    const message =
+      (body && body.message) ||
+      (typeof body === "string" ? body : "Request failed");
+    const err = new Error(message);
+    err.status = response.status;
+    err.body = body;
+    throw err;
   }
-  return data;
+  return body;
 }
 
 // PUBLIC_INTERFACE
 export const api = {
-  /** Authentication endpoints */
-  async login(payload) {
-    /** POST /auth/login {email, password} -> {token} */
-    const data = await request('/auth/login', { method: 'POST', body: payload });
-    if (data?.token) setToken(data.token);
-    return data;
-  },
-  async register(payload) {
-    /** POST /auth/register {name, email, password} -> {token?} */
-    const data = await request('/auth/register', { method: 'POST', body: payload });
-    if (data?.token) setToken(data.token);
-    return data;
-  },
+  // Auth
+  register: (payload) => apiRequest("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) => apiRequest("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
 
-  /** Interview flow */
-  async startInterview(payload) {
-    /** POST /interview/start {mode} -> {sessionId, firstQuestion?} */
-    return request('/interview/start', { method: 'POST', body: payload });
-  },
-  async nextQuestion(mode) {
-    /** GET /question/next?mode=hr|technical -> {question, id} */
-    const q = encodeURIComponent(mode || '');
-    return request(`/question/next?mode=${q}`);
-  },
-  async submitAnswer(payload) {
-    /** POST /interview/answer {sessionId, questionId, answer} -> {feedback, score, nextQuestion?} */
-    return request('/interview/answer', { method: 'POST', body: payload });
-  },
+  // Interview
+  startInterview: (payload) => apiRequest("/interview/start", { method: "POST", body: JSON.stringify(payload) }),
+  submitAnswer: (payload) => apiRequest("/interview/answer", { method: "POST", body: JSON.stringify(payload) }),
 
-  /** Reports */
-  async myReports() {
-    /** GET /report/my -> list or summary */
-    return request('/report/my', { method: 'GET' });
-  },
-  async sessionReport(id) {
-    /** GET /report/session/{id} */
-    return request(`/report/session/${encodeURIComponent(id)}`, { method: 'GET' });
-  },
+  // Question
+  nextQuestion: (sessionId) => apiRequest(`/question/next?session_id=${encodeURIComponent(sessionId)}`, { method: "GET" }),
+
+  // Reports
+  myReports: () => apiRequest("/report/my", { method: "GET" }),
+  sessionReport: (sessionId) => apiRequest(`/report/session/${encodeURIComponent(sessionId)}`, { method: "GET" }),
+
+  // Feedback
+  feedbackByResponse: (responseId) => apiRequest(`/feedback/${encodeURIComponent(responseId)}`, { method: "GET" }),
+  feedbackBySession: (sessionId) => apiRequest(`/feedback/session/${encodeURIComponent(sessionId)}`, { method: "GET" }),
 };

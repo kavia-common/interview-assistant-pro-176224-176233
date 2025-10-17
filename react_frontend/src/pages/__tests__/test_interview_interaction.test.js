@@ -39,7 +39,7 @@ describe('Interview flow - basic interaction', () => {
     render(<App />);
 
     // Page header
-    expect(await screen.findByText(/Interview/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Interview/i })).toBeInTheDocument();
     // First question
     expect(await screen.findByText(/Introduce yourself/i)).toBeInTheDocument();
 
@@ -51,9 +51,11 @@ describe('Interview flow - basic interaction', () => {
     fireEvent.click(submitBtn);
 
     // Feedback visible
-    expect(await screen.findByText(/Good answer/i)).toBeInTheDocument();
-    // Score label visible
-    expect(screen.getByText(/Score:\s*78\s*\/\s*100/i)).toBeInTheDocument();
+    await waitFor(async () => {
+      expect(await screen.findByText(/Good answer/i)).toBeInTheDocument();
+      expect(screen.getByText(/Score:\s*78\s*\/\s*100/i)).toBeInTheDocument();
+    });
+
     // Next question bubbles in chat and question section updates
     expect(await screen.findByText(/Why do you want this job\?/i)).toBeInTheDocument();
 

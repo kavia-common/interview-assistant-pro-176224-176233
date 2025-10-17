@@ -3,4 +3,4 @@
    - Loads window API mocks used by components (speech, etc.)
 */
 import '@testing-library/jest-dom';
-import './__tests__/test_setup_window_mocks';
+import './testSetup/window_mocks';

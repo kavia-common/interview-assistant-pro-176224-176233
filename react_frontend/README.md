@@ -22,6 +22,10 @@ Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
 Launches the test runner in interactive watch mode.
 
+### `npm run test:ci`
+
+Runs the test suite once in CI mode without watch and with CI=true to avoid interactive prompts.
+
 ### `npm run build`
 
 Builds the app for production to the `build` folder.\

@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 
 // Helper to render App with initial entries (route)
@@ -9,13 +8,23 @@ function renderWithRoute(route = '/') {
 }
 
 describe('App routing smoke tests', () => {
+  beforeEach(() => {
+    // Ensure no real network requests leak
+    jest.spyOn(global, 'fetch').mockReset();
+    localStorage.clear();
+  });
+
+  afterAll(() => {
+    global.fetch && global.fetch.mockRestore && global.fetch.mockRestore();
+  });
+
   test('redirects unauthenticated users to Login when visiting /dashboard', async () => {
     // clear token
     localStorage.removeItem('token');
     renderWithRoute('/dashboard');
 
     // Login view elements
-    expect(await screen.findByText(/Welcome back/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Welcome back/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Sign in/i })).toBeInTheDocument();
   });
 
@@ -23,7 +32,7 @@ describe('App routing smoke tests', () => {
     localStorage.removeItem('token');
     renderWithRoute('/register');
 
-    expect(await screen.findByText(/Create account/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Create account/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Create account/i })).toBeInTheDocument();
   });
 
@@ -32,18 +41,23 @@ describe('App routing smoke tests', () => {
     localStorage.setItem('token', 'dummy');
     renderWithRoute('/dashboard');
 
-    expect(await screen.findByText(/Dashboard/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Dashboard/i })).toBeInTheDocument();
     expect(screen.getByText(/Practice interviews/i)).toBeInTheDocument();
   });
 
   test('authenticated user can navigate to Reports route', async () => {
     localStorage.setItem('token', 'dummy');
+    // Mock reports list call
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    );
+
     renderWithRoute('/reports');
 
     // There may be a loading indicator first
     await waitFor(() => {
       // Header
-      expect(screen.getByText(/Reports/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Reports/i })).toBeInTheDocument();
     });
   });
 
@@ -56,7 +70,7 @@ describe('App routing smoke tests', () => {
 
     renderWithRoute('/interview?mode=hr');
 
-    expect(await screen.findByText(/Interview/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Interview/i })).toBeInTheDocument();
     expect(await screen.findByText(/Tell me about yourself\?/i)).toBeInTheDocument();
   });
 });
